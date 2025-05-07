@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Questions Ouvertes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .question-card {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        .reference-answer {
+            background-color: #f0f8ff;
+            padding: 10px;
+            border-left: 4px solid #4682b4;
+            margin-top: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        #export-btn {
+            background-color: #008CBA;
+        }
+        #loading {
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Générateur de Questions Ouvertes</h1>
+    
+    <div id="input-section">
+        <h2>Entrez votre texte</h2>
+        <form id="qcm-form">
+            <div>
+                <label for="text-content">Texte:</label>
+                <br>
+                <textarea id="text-content" name="text_content" rows="10" required></textarea>
+            </div>
+            <div>
+                <label for="num-questions">Nombre de questions:</label>
+                <input type="number" id="num-questions" name="num_questions" min="1" max="10" value="3">
+            </div>
+            <div>
+                <button type="submit">Générer les questions</button>
+            </div>
+        </form>
+    </div>
+    
+    <div id="loading" style="display:none;">
+        <p>Génération en cours, veuillez patienter...</p>
+    </div>
+    
+    <div id="results-section" style="display:none;">
+        <h2>Questions générées</h2>
+        <div id="qcm-results"></div>
+        <button id="export-btn">Exporter (JSON)</button>
+    </div>
+    
+    <script>
+        // Éléments du DOM
+        const qcmForm = document.getElementById('qcm-form');
+        const inputSection = document.getElementById('input-section');
+        const loadingSection = document.getElementById('loading');
+        const resultsSection = document.getElementById('results-section');
+        const qcmResults = document.getElementById('qcm-results');
+        const exportBtn = document.getElementById('export-btn');
+        
+        // Variable pour stocker les questions
+        let questions = [];
+        
+        // Gestionnaire pour la soumission du formulaire
+        qcmForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Afficher l'indicateur de chargement
+            inputSection.style.display = 'none';
+            loadingSection.style.display = 'block';
+            resultsSection.style.display = 'none';
+            
+            // Récupérer les données du formulaire
+            const formData = new FormData(qcmForm);
+            
+            try {
+                // Appel à l'API
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Stocker et afficher les questions
+                    questions = data.questions;
+                    displayQuestions();
+                    
+                    // Masquer le chargement et afficher les résultats
+                    loadingSection.style.display = 'none';
+                    resultsSection.style.display = 'block';
+                } else {
+                    throw new Error(data.error || 'Erreur inconnue');
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+                loadingSection.style.display = 'none';
+                inputSection.style.display = 'block';
+            }
+        });
+        
+        // Fonction pour afficher les questions
+        function displayQuestions() {
+            qcmResults.innerHTML = '';
+            
+            if (questions.length === 0) {
+                qcmResults.innerHTML = '<p>Aucune question générée.</p>';
+                return;
+            }
+            
+            questions.forEach((question, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-card';
+                
+                questionDiv.innerHTML = `
+                    <h3>Question ${index + 1}</h3>
+                    <p><strong>Question:</strong> ${question.question}</p>
+                    <div class="reference-answer">
+                        <p><strong>Réponse de référence:</strong></p>
+                        <p>${question.reference_answer}</p>
+                    </div>
+                `;
+                
+                qcmResults.appendChild(questionDiv);
+            });
+        }
+        
+        // Gestionnaire pour l'exportation
+        exportBtn.addEventListener('click', function() {
+            if (questions.length === 0) {
+                alert('Aucune question à exporter');
+                return;
+            }
+            
+            const jsonStr = JSON.stringify(questions, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'questions_ouvertes.json';
+            a.click();
+            
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>

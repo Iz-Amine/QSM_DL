@@ -3,69 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur de Questions Ouvertes</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        textarea {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-        }
-        .question-card {
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: #f9f9f9;
-        }
-        .reference-answer {
-            background-color: #f0f8ff;
-            padding: 10px;
-            border-left: 4px solid #4682b4;
-            margin-top: 10px;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        #export-btn {
-            background-color: #008CBA;
-        }
-        #loading {
-            text-align: center;
-            margin: 20px 0;
-        }
-    </style>
+    <title>Générateur de Questions</title>
 </head>
 <body>
-    <h1>Générateur de Questions Ouvertes</h1>
+    <h1>Générateur de Questions</h1>
     
     <div id="input-section">
         <h2>Entrez votre texte</h2>
-        <form id="qcm-form">
+        <form id="qcm-form" method="post" action="/generate">
             <div>
                 <label for="text-content">Texte:</label>
                 <br>
-                <textarea id="text-content" name="text_content" rows="10" required></textarea>
+                <textarea id="text-content" name="text_content" rows="10" cols="80" required></textarea>
             </div>
-            <div>
-                <label for="num-questions">Nombre de questions:</label>
-                <input type="number" id="num-questions" name="num_questions" min="1" max="10" value="3">
+            
+            <div style="margin-top: 15px; margin-bottom: 15px;">
+                <div>
+                    <input type="checkbox" id="open-questions" name="open_questions" checked>
+                    <label for="open-questions">Questions ouvertes</label>
+                    <input type="number" id="num-open-questions" name="num_open_questions" min="0" max="10" value="3" style="width: 60px; margin-left: 10px;">
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <input type="checkbox" id="yes-no-questions" name="yes_no_questions">
+                    <label for="yes-no-questions">Questions oui/non</label>
+                    <input type="number" id="num-yes-no-questions" name="num_yes_no_questions" min="0" max="10" value="0" style="width: 60px; margin-left: 10px;">
+                </div>
             </div>
+            
             <div>
                 <button type="submit">Générer les questions</button>
             </div>
@@ -91,12 +56,45 @@
         const qcmResults = document.getElementById('qcm-results');
         const exportBtn = document.getElementById('export-btn');
         
+        // Options de type de questions
+        const openQuestionsCheckbox = document.getElementById('open-questions');
+        const yesNoQuestionsCheckbox = document.getElementById('yes-no-questions');
+        const numOpenQuestions = document.getElementById('num-open-questions');
+        const numYesNoQuestions = document.getElementById('num-yes-no-questions');
+        
+        // Activer/désactiver les champs de nombre de questions
+        openQuestionsCheckbox.addEventListener('change', function() {
+            numOpenQuestions.disabled = !this.checked;
+            if (!this.checked) numOpenQuestions.value = 0;
+        });
+        
+        yesNoQuestionsCheckbox.addEventListener('change', function() {
+            numYesNoQuestions.disabled = !this.checked;
+            if (!this.checked) numYesNoQuestions.value = 0;
+        });
+        
         // Variable pour stocker les questions
         let questions = [];
         
         // Gestionnaire pour la soumission du formulaire
         qcmForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            // Vérifier qu'au moins un type de question est sélectionné
+            if (!openQuestionsCheckbox.checked && !yesNoQuestionsCheckbox.checked) {
+                alert('Veuillez sélectionner au moins un type de questions à générer.');
+                return;
+            }
+            
+            // Vérifier que le nombre total de questions est > 0
+            const totalQuestions = 
+                (openQuestionsCheckbox.checked ? parseInt(numOpenQuestions.value) : 0) + 
+                (yesNoQuestionsCheckbox.checked ? parseInt(numYesNoQuestions.value) : 0);
+                
+            if (totalQuestions <= 0) {
+                alert('Veuillez spécifier au moins une question à générer.');
+                return;
+            }
             
             // Afficher l'indicateur de chargement
             inputSection.style.display = 'none';
@@ -142,21 +140,58 @@
                 return;
             }
             
-            questions.forEach((question, index) => {
+            // Regrouper les questions par type
+            const openQuestions = questions.filter(q => q.type === 'open');
+            const yesNoQuestions = questions.filter(q => q.type === 'yes_no');
+            
+            // Fonction pour créer un élément de question
+            function createQuestionElement(question, index, type) {
                 const questionDiv = document.createElement('div');
-                questionDiv.className = 'question-card';
+                questionDiv.style.marginBottom = '20px';
+                questionDiv.style.border = '1px solid #ccc';
+                questionDiv.style.padding = '10px';
                 
-                questionDiv.innerHTML = `
-                    <h3>Question ${index + 1}</h3>
+                let html = `
+                    <h3>${type === 'open' ? 'Question ouverte' : 'Question oui/non'} ${index + 1}</h3>
                     <p><strong>Question:</strong> ${question.question}</p>
-                    <div class="reference-answer">
-                        <p><strong>Réponse de référence:</strong></p>
-                        <p>${question.reference_answer}</p>
-                    </div>
                 `;
                 
-                qcmResults.appendChild(questionDiv);
-            });
+                if (type === 'open') {
+                    html += `
+                        <p><strong>Réponse de référence:</strong> ${question.reference_answer}</p>
+                    `;
+                } else {
+                    html += `
+                        <p><strong>Réponse:</strong> ${question.answer}</p>
+                        <p><strong>Justification:</strong> ${question.justification}</p>
+                    `;
+                }
+                
+                questionDiv.innerHTML = html;
+                return questionDiv;
+            }
+            
+            // Afficher les questions ouvertes
+            if (openQuestions.length > 0) {
+                const openHeader = document.createElement('h2');
+                openHeader.textContent = 'Questions Ouvertes';
+                qcmResults.appendChild(openHeader);
+                
+                openQuestions.forEach((question, index) => {
+                    qcmResults.appendChild(createQuestionElement(question, index, 'open'));
+                });
+            }
+            
+            // Afficher les questions oui/non
+            if (yesNoQuestions.length > 0) {
+                const yesNoHeader = document.createElement('h2');
+                yesNoHeader.textContent = 'Questions Oui/Non';
+                qcmResults.appendChild(yesNoHeader);
+                
+                yesNoQuestions.forEach((question, index) => {
+                    qcmResults.appendChild(createQuestionElement(question, index, 'yes_no'));
+                });
+            }
         }
         
         // Gestionnaire pour l'exportation
@@ -172,11 +207,15 @@
             
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'questions_ouvertes.json';
+            a.download = 'questions_generees.json';
             a.click();
             
             URL.revokeObjectURL(url);
         });
+
+        // Initialiser l'état des champs de nombre
+        numOpenQuestions.disabled = !openQuestionsCheckbox.checked;
+        numYesNoQuestions.disabled = !yesNoQuestionsCheckbox.checked;
     </script>
 </body>
 </html>

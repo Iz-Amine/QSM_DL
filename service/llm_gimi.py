@@ -2,6 +2,7 @@ import json
 import os
 from dotenv import load_dotenv
 from google import genai
+from .rag_service import RAGService
 
 load_dotenv()
 
@@ -14,6 +15,15 @@ class QCMGenerator:
         
         # Initialize the Gemini client
         self.client = genai.Client(api_key=self.api_key)
+        
+        # Initialize RAG service
+        self.rag_service = RAGService()
+    
+    def process_document(self, text_content: str, metadata: dict = None) -> None:
+        """Process a document and prepare it for question generation"""
+        self.rag_service.process_text(text_content)
+        if metadata:
+            self.rag_service.save_metadata(metadata)
     
     def generate_questions_from_text(self, text_content, num_open_questions=0, num_yes_no_questions=0, model="gemini-2.0-flash"):
         """
@@ -22,16 +32,24 @@ class QCMGenerator:
         results = []
         
         try:
+            # Process the document if not already processed
+            if not self.rag_service.vector_store:
+                self.process_document(text_content)
+            
             # Generate open-ended questions if requested
             if num_open_questions > 0:
-                open_questions = self._generate_open_questions(text_content, num_open_questions, model)
+                # Get relevant context for open questions
+                context_chunks = self.rag_service.get_context_for_question("open", num_open_questions)
+                open_questions = self._generate_open_questions(context_chunks, num_open_questions, model)
                 for question in open_questions:
                     question['type'] = 'open'
                 results.extend(open_questions)
             
             # Generate yes/no questions if requested
             if num_yes_no_questions > 0:
-                yes_no_questions = self._generate_yes_no_questions(text_content, num_yes_no_questions, model)
+                # Get relevant context for yes/no questions
+                context_chunks = self.rag_service.get_context_for_question("yes_no", num_yes_no_questions)
+                yes_no_questions = self._generate_yes_no_questions(context_chunks, num_yes_no_questions, model)
                 for question in yes_no_questions:
                     question['type'] = 'yes_no'
                 results.extend(yes_no_questions)
@@ -44,16 +62,17 @@ class QCMGenerator:
             traceback.print_exc()
             return []
     
-    def _generate_open_questions(self, text_content, num_questions, model):
+    def _generate_open_questions(self, context_chunks, num_questions, model):
         """
         Generate open-ended questions with reference answers
         """
         try:
-            # Create the prompt
+            # Create the prompt with context chunks
+            context = "\n\n".join(context_chunks)
             prompt = f"""
             Generate {num_questions} open-ended questions about the following text:
             
-            {text_content}
+            {context}
             
             IMPORTANT INSTRUCTIONS:
             1. Create questions that are strictly based ONLY on the information contained in the text above.
@@ -125,16 +144,17 @@ class QCMGenerator:
             traceback.print_exc()
             return []
     
-    def _generate_yes_no_questions(self, text_content, num_questions, model):
+    def _generate_yes_no_questions(self, context_chunks, num_questions, model):
         """
         Generate yes/no questions with answers and justifications
         """
         try:
-            # Create the prompt
+            # Create the prompt with context chunks
+            context = "\n\n".join(context_chunks)
             prompt = f"""
             Generate {num_questions} yes/no questions about the following text:
             
-            {text_content}
+            {context}
             
             IMPORTANT INSTRUCTIONS:
             1. Create questions that are strictly based ONLY on the information contained in the text above.
@@ -206,13 +226,6 @@ class QCMGenerator:
             import traceback
             traceback.print_exc()
             return []
-    
-
-        """
-        Legacy method for generating open-ended questions (kept for backward compatibility)
-        """
-        questions = self._generate_open_questions(text_content, num_questions, model)
-        return questions
 
 # Example usage
 if __name__ == "__main__":

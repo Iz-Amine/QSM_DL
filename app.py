@@ -3,14 +3,24 @@ from service.llm_gimi import QCMGenerator
 import os
 from dotenv import load_dotenv
 import traceback
+from werkzeug.utils import secure_filename
 
 # Charger les variables d'environnement
 load_dotenv()
 
 app = Flask(__name__)
 
+# Configuration for file uploads
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'pdf'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 # Initialiser le générateur de QCM
 qcm_generator = QCMGenerator()
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def index():
@@ -20,6 +30,39 @@ def index():
 def api_documentation():
     """Page de documentation de l'API"""
     return render_template('api_docs.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    """Handle PDF file upload"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part', 'status': 'error'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file', 'status': 'error'}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Process the PDF file
+        try:
+            qcm_generator.rag_service.process_pdf(filepath)
+            
+            # Get document statistics
+            stats = qcm_generator.rag_service.get_document_stats()
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'File uploaded and processed successfully',
+                'filename': filename,
+                'document_stats': stats
+            })
+        except Exception as e:
+            return jsonify({'error': str(e), 'status': 'error'}), 500
+    
+    return jsonify({'error': 'Invalid file type', 'status': 'error'}), 400
 
 @app.route('/generate', methods=['POST'])
 def generate_qcm():

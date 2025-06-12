@@ -1,0 +1,21 @@
+flask
+python-dotenv
+google-genai
+langchain
+chromadb
+
+# Add any other dependencies as needed 
+# For Gemini API
+google-generativeai
+
+# For PDF Parsing
+pypdf
+
+# For Embedding & Vector Search
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4  # or chromadb if preferred
+
+langchain-community>=0.3.25
+langchain-core>=0.3.25
+
+

@@ -103,4 +103,9 @@ venv.bak/
 .idea/
 .vscode/
 *.swp
-*.swo 
+*.swo
+
+# Project specific
+uploads/
+chroma_db/
+metadata/ 

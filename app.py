@@ -14,7 +14,11 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'pdf'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Create required directories
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs('chroma_db', exist_ok=True)
+os.makedirs('metadata', exist_ok=True)
 
 # Initialiser le générateur de QCM
 qcm_generator = QCMGenerator()

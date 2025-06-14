@@ -95,31 +95,45 @@ def handle_json_request(json_data, has_pdf=False):
         if has_pdf:
             # If we have a processed PDF, use the vector store
             questions = qcm_generator.generate_questions_from_text(
-                text_content="",  # Empty text as we're using the processed PDF
+                text_content="",  # Empty string since we're using the vector store
                 num_open_questions=num_open_questions,
                 num_yes_no_questions=num_yes_no_questions
             )
+            # Get document statistics for PDF
+            stats = qcm_generator.rag_service.get_document_stats()
         else:
             # If no PDF, require text content
             text_content = json_data.get('text_content', '')
             if not text_content:
                 return jsonify({'error': 'Text content is required when no PDF is provided', 'status': 'error'}), 400
             
+            # Process the text content through RAG system
+            try:
+                qcm_generator.rag_service.process_text(text_content)
+                # Get document statistics
+                stats = qcm_generator.rag_service.get_document_stats()
+            except Exception as e:
+                return jsonify({'error': f'Error processing text: {str(e)}', 'status': 'error'}), 500
+            
+            # Generate questions using the processed text
             questions = qcm_generator.generate_questions_from_text(
                 text_content=text_content,
                 num_open_questions=num_open_questions,
                 num_yes_no_questions=num_yes_no_questions
             )
         
-        return jsonify({
+        response_data = {
             'status': 'success',
             'questions': questions,
             'metadata': {
                 'total_questions': len(questions),
                 'open_questions': num_open_questions,
-                'yes_no_questions': num_yes_no_questions
+                'yes_no_questions': num_yes_no_questions,
+                'document_stats': stats
             }
-        })
+        }
+            
+        return jsonify(response_data)
     except Exception as e:
         traceback.print_exc()
         return jsonify({'error': f'Erreur lors de la génération des questions: {str(e)}', 'status': 'error'}), 500

@@ -24,38 +24,17 @@ class RAGService:
         self.documents = []
         self.current_document_metadata = {}
 
-    
-    ## NOT Working as expected to review later
-    def cleanup_vector_store(self):
-        """Clean up the vector store and its files"""
-        import shutil, os, time
-        from chromadb import PersistentClient
-
-        # Dereference vector store
+    def reset(self):
+        """Reset the service state to ensure clean processing of new documents"""
         self.vector_store = None
-
-        # Try to reset the Chroma DB client
-        try:
-            client = PersistentClient(persist_directory="./chroma_db")
-            client.reset()  # This clears collections and releases locks
-            print("Chroma client reset successfully.")
-        except Exception as e:
-            print(f"Warning: Error resetting Chroma client: {e}")
-
-        # Retry deletion
-        for i in range(5):
-            try:
-                if os.path.exists("./chroma_db"):
-                    shutil.rmtree("./chroma_db")
-                    print("Deleted chroma_db folder.")
-                    break
-            except Exception as e:
-                print(f"Warning: Attempt {i+1} - Error deleting chroma_db: {str(e)}")
-                time.sleep(1)
-
+        self.documents = []
+        self.current_document_metadata = {}
 
     def process_pdf(self, pdf_path: str) -> None:
         """Process a PDF file and create vector embeddings"""
+        # Reset previous state
+        self.reset()
+        
         # Load PDF
         loader = PyPDFLoader(pdf_path)
         pages = loader.load()
@@ -64,7 +43,7 @@ class RAGService:
         collection_name = f"pdf_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
         # Clean up existing vector store
-        self.cleanup_vector_store()
+        # self.cleanup_vector_store()  # Commented out as it's causing issues
         
         # Create metadata
         self.current_document_metadata = {
@@ -93,12 +72,15 @@ class RAGService:
             # Save metadata
             self.save_metadata(self.current_document_metadata)
         except Exception as e:
-            # If there's an error, clean up and re-raise
-            self.cleanup_vector_store()
+            # If there's an error, reset and re-raise
+            self.reset()
             raise Exception(f"Error creating vector store: {str(e)}")
 
     def process_text(self, text: str) -> None:
         """Process raw text and create vector embeddings"""
+        # Reset previous state
+        self.reset()
+        
         # Create metadata
         self.current_document_metadata = {
             'processed_date': datetime.now().isoformat(),
@@ -111,15 +93,20 @@ class RAGService:
         self.documents = self.text_splitter.split_text(text)
         self.current_document_metadata['total_chunks'] = len(self.documents)
         
-        # Create vector store
-        self.vector_store = Chroma.from_texts(
-            texts=self.documents,
-            embedding=self.embeddings,
-            persist_directory="./chroma_db"
-        )
-        
-        # Save metadata
-        self.save_metadata(self.current_document_metadata)
+        try:
+            # Create vector store
+            self.vector_store = Chroma.from_texts(
+                texts=self.documents,
+                embedding=self.embeddings,
+                persist_directory="./chroma_db"
+            )
+            
+            # Save metadata
+            self.save_metadata(self.current_document_metadata)
+        except Exception as e:
+            # If there's an error, reset and re-raise
+            self.reset()
+            raise Exception(f"Error creating vector store: {str(e)}")
 
     def get_relevant_chunks(self, query: str, k: int = 3) -> List[str]:
         """Retrieve the most relevant text chunks for a given query"""
@@ -190,3 +177,31 @@ class RAGService:
             'chunk_overlap': self.current_document_metadata.get('chunk_overlap', 0),
             'processed_date': self.current_document_metadata.get('processed_date', '')
         } 
+        
+    ## NOT Working as expected to review later
+    # def cleanup_vector_store(self):
+    #     """Clean up the vector store and its files"""
+    #     import shutil, os, time
+    #     from chromadb import PersistentClient
+
+    #     # Dereference vector store
+    #     self.vector_store = None
+
+    #     # Try to reset the Chroma DB client
+    #     try:
+    #         client = PersistentClient(persist_directory="./chroma_db")
+    #         client.reset()  # This clears collections and releases locks
+    #         print("Chroma client reset successfully.")
+    #     except Exception as e:
+    #         print(f"Warning: Error resetting Chroma client: {e}")
+
+    #     # Retry deletion
+    #     for i in range(5):
+    #         try:
+    #             if os.path.exists("./chroma_db"):
+    #                 shutil.rmtree("./chroma_db")
+    #                 print("Deleted chroma_db folder.")
+    #                 break
+    #         except Exception as e:
+    #             print(f"Warning: Attempt {i+1} - Error deleting chroma_db: {str(e)}")
+    #             time.sleep(1)

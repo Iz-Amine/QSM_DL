@@ -76,10 +76,9 @@ class QCMGenerator:
             
             IMPORTANT INSTRUCTIONS:
             1. Create questions that are strictly based ONLY on the information contained in the text above.
-            2. Do not use any external knowledge or information not present in the provided text.
-            3. The questions and answers MUST be in the SAME LANGUAGE as the input text.
+            2. The questions and answers MUST be in the SAME LANGUAGE as the input text.
                - If the text is in French, generate questions and answers in French.
-               - If the text is in Arabic, generate questions and answers in Arabic.
+               - If the text is in Arabic, generate questions and answers in Arabic as is, without adding tashkeel (الحركات). Do not attempt to vocalize the text..
                - Always match the exact language of the original text.
             
             Each question should:
@@ -87,7 +86,7 @@ class QCMGenerator:
             2. Include a comprehensive reference answer that can be directly verified from the text
             3. Encourage thoughtful responses rather than simple yes/no or one-word answers
             
-            Format the response as JSON:
+            Format the response as JSON
             {{
               "questions": [
                 {{
@@ -158,10 +157,9 @@ class QCMGenerator:
             
             IMPORTANT INSTRUCTIONS:
             1. Create questions that are strictly based ONLY on the information contained in the text above.
-            2. Do not use any external knowledge or information not present in the provided text.
-            3. The questions and answers MUST be in the SAME LANGUAGE as the input text.
+            2. The questions and answers MUST be in the SAME LANGUAGE as the input text.
                - If the text is in French, generate questions and answers in French.
-               - If the text is in Arabic, generate questions and answers in Arabic.
+               - If the text is in Arabic, generate questions and answers in Arabic as is, without adding tashkeel (الحركات). Do not attempt to vocalize the text.
                - Always match the exact language of the original text.
             
             Each question should:

@@ -1,0 +1,58 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Unit test / coverage reports
+coverage/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Environments
+.env
+.venv/
+venv/
+ENV/
+env.bak/
+env/
+
+# Flask-specific
+instance/
+*.db
+*.sqlite3
+
+# MacOS
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# IDEs/editors
+.vscode/
+.idea/
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Logs
+*.log
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Other
+*.bak
+*.swp
+*.tmp
+*.log
+
+chroma_db/
+

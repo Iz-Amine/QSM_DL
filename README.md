@@ -25,13 +25,23 @@ A Flask-based application that generates questions (QCM) from PDF documents usin
   - `metadata/` directory (for document metadata)
   - `.env` file (for environment variables)
 
-## Setup
+## Project Setup and Running Instructions
 
-1. Create and activate a virtual environment:
+## Prerequisites
+- Python 3.9 or higher
+- pip (Python package installer)
+- Docker (optional, for containerized deployment)
+
+## Setting up Virtual Environment
+
+1. Create a virtual environment:
 ```bash
+# Windows
 python -m venv venv
-.\venv\Scripts\Activate.ps1  # Windows
-source venv/bin/activate     # Linux/Mac
+
+# Activate the virtual environment
+# Windows
+.\venv\Scripts\activate
 ```
 
 2. Install dependencies:
@@ -39,12 +49,44 @@ source venv/bin/activate     # Linux/Mac
 pip install -r requirements.txt
 ```
 
-3. Create a `.env` file with your API keys and configuration
+3. Set up GEMINI_API_KEY:
+```bash
+# Windows
+set GEMINI_API_KEY=your_api_key_here
+
+# Linux/Mac
+export GEMINI_API_KEY=your_api_key_here
+```
 
 4. Run the application:
 ```bash
 python app.py
 ```
+
+## Running with Docker
+
+1. Build the Docker image:
+```bash
+docker build -t your-app-name .
+```
+
+2. Run the container with GEMINI_API_KEY:
+```bash
+# Windows PowerShell
+docker run -p 5000:5000 -e GEMINI_API_KEY=your_api_key_here your-app-name
+
+# Windows Command Prompt
+docker run -p 5000:5000 -e "GEMINI_API_KEY=your_api_key_here" your-app-name
+```
+
+## Environment Variables
+The following environment variables are required:
+- `GEMINI_API_KEY`: Your Google Gemini API key
+
+## Notes
+- Make sure to replace `your_api_key_here` with your actual Gemini API key
+- Never commit your API key to version control
+- For development, you can create a `.env` file in the project root with your environment variables
 
 ## API Endpoints
 
@@ -66,13 +108,6 @@ python app.py
 ├── uploads/          # PDF upload directory
 ├── chroma_db/        # Vector store database
 └── metadata/         # Document metadata
-```
-
-## Environment Variables
-
-Create a `.env` file with the following variables:
-```
-GOOGLE_API_KEY=your_api_key_here
 ```
 
 ## Notes
